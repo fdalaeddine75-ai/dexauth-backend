@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DexAuth // Secure Licensing Control</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Identity Sign-In Client -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-[#08090C] text-slate-100 min-h-screen flex flex-col font-['Outfit'] overflow-x-hidden selection:bg-cyan-500 selection:text-black">
+
+  <!-- TOAST NOTIFICATION CONTAINER -->
+  <div id="toast-container" class="fixed top-5 right-5 z-[9999] flex flex-col gap-3 pointer-events-none"></div>
+
+  <!-- Glow effects behind dashboard -->
+  <div class="fixed top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-purple-900/10 blur-[150px] pointer-events-none z-0"></div>
+  <div class="fixed bottom-[-10%] right-[-10%] w-[50vw] h-[50vw] rounded-full bg-cyan-900/10 blur-[150px] pointer-events-none z-0"></div>
+
+  <!-- ADMIN LOGIN OVERLAY -->
+  <div id="login-container" class="fixed inset-0 bg-[#08090C] z-50 flex items-center justify-center p-4">
+    <div class="cyber-box max-w-md w-full p-8 rounded-lg bg-[#0C0E14] border border-purple-500/30 shadow-[0_0_50px_rgba(168,85,247,0.15)] relative overflow-hidden z-10">
+      <div class="absolute top-0 left-0 w-full h-[3px] bg-gradient-to-r from-purple-500 via-pink-500 to-cyan-500"></div>
+      
+      <div class="flex flex-col items-center mb-8">
+        <div class="w-16 h-16 rounded-lg bg-gradient-to-tr from-purple-600 to-cyan-400 flex items-center justify-center shadow-[0_0_20px_rgba(168,85,247,0.5)] mb-4">
+          <i data-lucide="shield-alert" class="w-8 h-8 text-black stroke-[2]"></i>
+        </div>
+        <h1 class="text-3xl font-extrabold font-['Orbitron'] tracking-wider bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">DEXAUTH</h1>
+        <p class="text-xs text-slate-400 uppercase tracking-widest mt-1">Administrative Terminal</p>
+      </div>
+
+      <!-- Google OAuth Sign-in integration elements -->
+      <div id="g-login-panel" class="space-y-6">
+        <p class="text-center text-sm text-slate-400">Please authenticate with an authorized Google admin account to connect.</p>
+        
+        <!-- Google Sign-In Button Container -->
+        <div class="flex justify-center">
+          <div id="g-signin-button"></div>
+        </div>
+      </div>
+      <p class="text-center text-red-500 text-sm mt-4 hidden" id="login-error">ACCESS DENIED: Google Account unauthorized.</p>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="app-container" class="flex flex-col md:flex-row flex-1 z-10 hidden">
+    <!-- Sidebar -->
+    <aside class="w-full md:w-64 bg-[#0B0C10] border-r border-slate-800 flex flex-col justify-between shrink-0">
+      <div>
+        <!-- Brand Header -->
+        <div class="p-6 border-b border-slate-800 flex items-center space-x-3">
+          <div class="w-8 h-8 rounded bg-gradient-to-tr from-cyan-500 to-purple-600 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+            <i data-lucide="shield" class="w-4 h-4 text-black stroke-[2.5]"></i>
+          </div>
+          <div>
+            <h2 class="text-lg font-bold font-['Orbitron'] tracking-wider bg-gradient-to-r from-cyan-400 to-purple-400 bg-clip-text text-transparent">DEXAUTH</h2>
+            <p class="text-[10px] text-slate-500 uppercase tracking-widest">Version 1.0.0</p>
+          </div>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-4 space-y-1">
+          <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-cyan-400 bg-cyan-950/20 border-l-2 border-cyan-400">
+            <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+            <span>Overview</span>
+          </a>
+          <a href="#" onclick="switchTab('apps')" id="nav-apps" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-2 border-transparent">
+            <i data-lucide="box" class="w-4 h-4"></i>
+            <span>Applications</span>
+          </a>
+          <a href="#" onclick="switchTab('keys')" id="nav-keys" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-2 border-transparent">
+            <i data-lucide="key-round" class="w-4 h-4"></i>
+            <span>Licenses</span>
+          </a>
+          <a href="#" onclick="switchTab('users')" id="nav-users" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-2 border-transparent">
+            <i data-lucide="users" class="w-4 h-4"></i>
+            <span>Users</span>
+          </a>
+          <a href="#" onclick="switchTab('variables')" id="nav-variables" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-2 border-transparent">
+            <i data-lucide="database" class="w-4 h-4"></i>
+            <span>Variables</span>
+          </a>
+          <a href="#" onclick="switchTab('files')" id="nav-files" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-2 border-transparent">
+            <i data-lucide="file-down" class="w-4 h-4"></i>
+            <span>Files</span>
+          </a>
+          <a href="#" onclick="switchTab('logs')" id="nav-logs" class="flex items-center space-x-3 px-4 py-3 rounded text-sm font-semibold transition-all text-slate-400 hover:text-slate-200 hover:bg-slate-900/50 border-l-2 border-transparent">
+            <i data-lucide="terminal" class="w-4 h-4"></i>
+            <span>Logs</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Logout / User Section -->
+      <div class="p-4 border-t border-slate-800">
+        <button onclick="logoutAdmin()" class="flex items-center space-x-3 px-4 py-3 w-full rounded text-sm font-semibold text-red-400 hover:text-red-300 hover:bg-red-950/20 transition-all">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>Disconnect</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow p-8 overflow-y-auto max-w-7xl">
+      <!-- HEADER -->
+      <header class="flex flex-col sm:flex-row justify-between sm:items-center pb-6 mb-8 border-b border-slate-800 gap-4">
+        <div>
+          <h1 id="page-title" class="text-3xl font-extrabold tracking-wider font-['Orbitron'] text-slate-100">OVERVIEW</h1>
+          <p id="page-desc" class="text-slate-400 text-sm mt-1">Real-time licensing metrics and threat monitoring.</p>
+        </div>
+        <div class="flex items-center space-x-3 bg-[#0E1117] px-4 py-2.5 rounded border border-slate-800">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="text-xs font-mono font-bold tracking-widest text-slate-300 uppercase">SYSTEMS ONLINE</span>
+        </div>
+      </header>
+
+      <!-- TAB CONTROLLER VIEWS -->
+      
+      <!-- 0. APPLICATIONS VIEW -->
+      <section id="view-apps" class="tab-view space-y-6 hidden">
+        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <p class="text-slate-400 text-sm">Manage your applications. Each app has its own App ID, Secret, users, and keys.</p>
+          <button onclick="openCreateAppModal()" class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded text-black font-bold text-sm hover:opacity-90 transition-all shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+            <i data-lucide="plus" class="w-4 h-4"></i> New Application
+          </button>
+        </div>
+        <div id="apps-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+          <div class="col-span-full text-center text-slate-500 py-12 font-mono text-sm">Loading applications...</div>
+        </div>
+      </section>
+
+      <!-- 1. DASHBOARD VIEW -->
+      <section id="view-dashboard" class="tab-view space-y-8">
+        <!-- Metric Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div class="card p-6 bg-[#0E1117] border border-cyan-500/20 rounded shadow-[0_0_15px_rgba(6,182,212,0.05)] relative overflow-hidden">
+            <div class="absolute right-4 bottom-4 opacity-5 text-cyan-400"><i data-lucide="box" class="w-16 h-16"></i></div>
+            <p class="text-xs uppercase tracking-widest font-bold text-slate-400">Total Apps</p>
+            <h3 class="text-4xl font-extrabold font-['Orbitron'] text-cyan-400 mt-2" id="stat-total-apps">0</h3>
+            <p class="text-xs text-slate-500 mt-2">Registered applications</p>
+          </div>
+          <div class="card p-6 bg-[#0E1117] border border-purple-500/20 rounded shadow-[0_0_15px_rgba(6,182,212,0.05)] relative overflow-hidden">
+            <p class="text-xs uppercase tracking-widest font-bold text-slate-400">Total Keys</p>
+            <h3 class="text-4xl font-extrabold font-['Orbitron'] text-cyan-400 mt-2" id="stat-total-keys">0</h3>
+            <p class="text-xs text-slate-500 mt-2">Generated licensing credentials</p>
+          </div>
+          <div class="card p-6 bg-[#0E1117] border border-purple-500/20 rounded shadow-[0_0_15px_rgba(168,85,247,0.05)] relative overflow-hidden">
+            <div class="absolute right-4 bottom-4 opacity-5 text-purple-400"><i data-lucide="users" class="w-16 h-16"></i></div>
+            <p class="text-xs uppercase tracking-widest font-bold text-slate-400">Active Users</p>
+            <h3 class="text-4xl font-extrabold font-['Orbitron'] text-purple-400 mt-2" id="stat-active-users">0</h3>
+            <p class="text-xs text-slate-500 mt-2">Users with valid licenses</p>
+          </div>
+          <div class="card p-6 bg-[#0E1117] border border-emerald-500/20 rounded shadow-[0_0_15px_rgba(16,185,129,0.05)] relative overflow-hidden">
+            <div class="absolute right-4 bottom-4 opacity-5 text-emerald-400"><i data-lucide="shield-check" class="w-16 h-16"></i></div>
+            <p class="text-xs uppercase tracking-widest font-bold text-slate-400">Unused Licenses</p>
+            <h3 class="text-4xl font-extrabold font-['Orbitron'] text-emerald-400 mt-2" id="stat-unused-keys">0</h3>
+            <p class="text-xs text-slate-500 mt-2">Keys waiting for registration</p>
+          </div>
+          <div class="card p-6 bg-[#0E1117] border border-red-500/20 rounded shadow-[0_0_15px_rgba(239,68,68,0.05)] relative overflow-hidden">
+            <div class="absolute right-4 bottom-4 opacity-5 text-red-400"><i data-lucide="user-x" class="w-16 h-16"></i></div>
+            <p class="text-xs uppercase tracking-widest font-bold text-slate-400">Banned Accounts</p>
+            <h3 class="text-4xl font-extrabold font-['Orbitron'] text-red-400 mt-2" id="stat-banned-users">0</h3>
+            <p class="text-xs text-slate-500 mt-2">Suspended keys and accounts</p>
+          </div>
+        </div>
+
+        <!-- Dashboard Layout: Audit Logs -->
+        <div class="grid grid-cols-1 gap-6">
+          <div class="card p-6 bg-[#0E1117] border border-slate-800 rounded">
+            <h3 class="text-lg font-bold font-['Orbitron'] tracking-wider mb-4 text-slate-200">RECENT CRITICAL LOGS</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm font-mono">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400 text-xs tracking-wider">
+                    <th class="py-3 px-4 uppercase">Timestamp</th>
+                    <th class="py-3 px-4 uppercase">Action</th>
+                    <th class="py-3 px-4 uppercase">Operator/User</th>
+                    <th class="py-3 px-4 uppercase">IP Address</th>
+                    <th class="py-3 px-4 uppercase">HWID</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-logs-tbody">
+                  <!-- Loaded dynamically -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. LICENSES VIEW -->
+      <section id="view-keys" class="tab-view space-y-8 hidden">
+        <!-- License Generator panel -->
+        <div class="card p-6 bg-[#0E1117] border border-cyan-500/20 rounded relative">
+          <h3 class="text-lg font-bold font-['Orbitron'] text-cyan-400 mb-4 tracking-wider">GENERATE LICENSE KEYS</h3>
+          <form id="key-gen-form" class="grid grid-cols-1 sm:grid-cols-4 gap-6 items-end">
+            <div>
+              <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">App</label>
+              <select id="gen-appid" class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-cyan-400">
+                <option value="">Select an app...</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Amount</label>
+              <input type="number" id="gen-amount" min="1" max="100" value="1" required class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-cyan-400">
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Duration (Days)</label>
+              <select id="gen-duration" class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-cyan-400">
+                <option value="1">1 Day</option>
+                <option value="7">7 Days</option>
+                <option value="30">30 Days</option>
+                <option value="365">1 Year (365 Days)</option>
+                <option value="9999">Lifetime (Permanent)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Note (Optional)</label>
+              <input type="text" id="gen-note" placeholder="Admin note" class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-cyan-400">
+            </div>
+            <div class="sm:col-span-4">
+              <button type="submit" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold font-['Orbitron'] tracking-wider rounded uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Generate Credentials</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Licenses Table -->
+        <div class="card p-6 bg-[#0E1117] border border-slate-800 rounded">
+          <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+            <h3 class="text-lg font-bold font-['Orbitron'] tracking-wider text-slate-200">GENERATED CREDENTIALS</h3>
+            <div class="relative">
+              <input type="text" id="keys-search" oninput="filterKeys()" placeholder="Search license keys..." class="bg-[#121620] border border-slate-800 rounded px-4 py-2 pl-10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-full sm:w-64">
+              <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-3"></i>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs tracking-wider font-mono">
+                  <th class="py-3 px-4 uppercase">License Key</th>
+                  <th class="py-3 px-4 uppercase">Duration</th>
+                  <th class="py-3 px-4 uppercase">Expires</th>
+                  <th class="py-3 px-4 uppercase">HWID Status</th>
+                  <th class="py-3 px-4 uppercase">Status</th>
+                  <th class="py-3 px-4 uppercase text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="keys-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 3. USERS VIEW -->
+      <section id="view-users" class="tab-view space-y-8 hidden">
+        <!-- Registered Users Table -->
+        <div class="card p-6 bg-[#0E1117] border border-slate-800 rounded">
+          <div class="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+            <div class="flex items-center gap-3">
+              <h3 class="text-lg font-bold font-['Orbitron'] tracking-wider text-slate-200 font-bold">CLIENT USERS</h3>
+              <button onclick="openCreateUserModal()" class="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs rounded transition-all shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+                <i data-lucide="user-plus" class="w-3.5 h-3.5"></i> Create User
+              </button>
+            </div>
+            <div class="relative">
+              <input type="text" id="users-search" oninput="filterUsers()" placeholder="Search users or keys..." class="bg-[#121620] border border-slate-800 rounded px-4 py-2 pl-10 text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-full sm:w-64">
+              <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-3"></i>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs tracking-wider font-mono">
+                  <th class="py-3 px-4 uppercase">Username</th>
+                  <th class="py-3 px-4 uppercase">License Key</th>
+                  <th class="py-3 px-4 uppercase">HWID</th>
+                  <th class="py-3 px-4 uppercase">Registered Date</th>
+                  <th class="py-3 px-4 uppercase">Status</th>
+                  <th class="py-3 px-4 uppercase text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="users-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4. VARIABLES VIEW -->
+      <section id="view-variables" class="tab-view space-y-8 hidden">
+        <!-- Add / Edit Variable panel -->
+        <div class="card p-6 bg-[#0E1117] border border-purple-500/20 rounded relative">
+          <h3 class="text-lg font-bold font-['Orbitron'] text-purple-400 mb-4 tracking-wider">CREATE / UPDATE SECURE VARIABLE</h3>
+          <form id="var-form" class="grid grid-cols-1 sm:grid-cols-2 gap-6 items-end">
+            <div>
+              <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Variable Name</label>
+              <input type="text" id="var-name" required placeholder="e.g. API_KEY_SECRET" class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-purple-400 font-mono">
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Variable Value</label>
+              <input type="text" id="var-value" required placeholder="e.g. sk_live_51M..." class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-purple-400">
+            </div>
+            <div class="sm:col-span-2">
+              <button type="submit" class="px-6 py-3 bg-purple-600 hover:bg-purple-500 text-black font-extrabold font-['Orbitron'] tracking-wider rounded uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(168,85,247,0.3)] transition-all">
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Save Variable</span>
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Variables List Table -->
+        <div class="card p-6 bg-[#0E1117] border border-slate-800 rounded">
+          <h3 class="text-lg font-bold font-['Orbitron'] tracking-wider text-slate-200 mb-4">SECURE VARIABLES</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs tracking-wider font-mono">
+                  <th class="py-3 px-4 uppercase">Name</th>
+                  <th class="py-3 px-4 uppercase">Value</th>
+                  <th class="py-3 px-4 uppercase text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="variables-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 5. FILES VIEW -->
+      <section id="view-files" class="tab-view space-y-8 hidden">
+        <!-- File Uploader panel -->
+        <div class="card p-6 bg-[#0E1117] border border-cyan-500/20 rounded relative">
+          <h3 class="text-lg font-bold font-['Orbitron'] text-cyan-400 mb-4 tracking-wider">UPLOAD SECURE REMOTE FILE</h3>
+          <form id="file-upload-form" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Remote Variable Name</label>
+                <input type="text" id="file-name-var" required placeholder="e.g. CHEAT_DLL_LOAD" class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.5 text-slate-200 focus:outline-none focus:border-cyan-400 font-mono">
+              </div>
+              <div>
+                <label class="block text-xs uppercase tracking-wider text-slate-400 mb-2">Local File Upload</label>
+                <input type="file" id="file-input" required class="w-full bg-[#121620] border border-slate-800 rounded px-4 py-2.0 text-slate-400 focus:outline-none focus:border-cyan-400 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-xs file:font-semibold file:bg-cyan-950 file:text-cyan-400 hover:file:bg-cyan-900 file:cursor-pointer">
+              </div>
+            </div>
+            <button type="submit" class="px-6 py-3 bg-cyan-500 hover:bg-cyan-400 text-black font-extrabold font-['Orbitron'] tracking-wider rounded uppercase flex items-center justify-center space-x-2 shadow-[0_0_15px_rgba(6,182,212,0.3)] transition-all">
+              <i data-lucide="upload-cloud" class="w-4 h-4"></i>
+              <span>Stream File to Server</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Files List Table -->
+        <div class="card p-6 bg-[#0E1117] border border-slate-800 rounded">
+          <h3 class="text-lg font-bold font-['Orbitron'] tracking-wider text-slate-200 mb-4">MANAGED FILES</h3>
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs tracking-wider font-mono">
+                  <th class="py-3 px-4 uppercase">Reference Name</th>
+                  <th class="py-3 px-4 uppercase">Filename</th>
+                  <th class="py-3 px-4 uppercase">SHA-256 Hash</th>
+                  <th class="py-3 px-4 uppercase text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="files-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. LOGS VIEW -->
+      <section id="view-logs" class="tab-view space-y-8 hidden">
+        <!-- Complete Audit Logs -->
+        <div class="card p-6 bg-[#0E1117] border border-slate-800 rounded">
+          <div class="flex justify-between items-center mb-6">
+            <h3 class="text-lg font-bold font-['Orbitron'] tracking-wider text-slate-200 font-bold">SYSTEM AUDIT TRAIL</h3>
+            <button onclick="loadLogs()" class="flex items-center space-x-2 px-4 py-2 border border-slate-800 rounded text-slate-400 hover:text-slate-200 hover:bg-slate-900 transition-all font-mono text-xs">
+              <i data-lucide="refresh-cw" class="w-3 h-3"></i>
+              <span>Refresh Trail</span>
+            </button>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm font-mono">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 text-xs tracking-wider">
+                  <th class="py-3 px-4 uppercase">Timestamp</th>
+                  <th class="py-3 px-4 uppercase">Action Log</th>
+                  <th class="py-3 px-4 uppercase">Operator/Client</th>
+                  <th class="py-3 px-4 uppercase">IP Address</th>
+                  <th class="py-3 px-4 uppercase">HWID Reference</th>
+                </tr>
+              </thead>
+              <tbody id="logs-tbody">
+                <!-- Loaded dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Custom Scripts -->
+  <script src="app.js"></script>
+
+  <!-- CREATE APP MODAL -->
+  <div id="modal-create-app" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0C0E14] border border-cyan-500/30 rounded-lg shadow-[0_0_40px_rgba(6,182,212,0.15)] w-full max-w-md p-6 relative">
+      <div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-cyan-500 to-purple-600"></div>
+      <h3 class="text-lg font-bold font-['Orbitron'] text-cyan-400 mb-5 tracking-wider">NEW APPLICATION</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-bold block mb-1">App Name *</label>
+          <input id="new-app-name" type="text" placeholder="e.g. MyTool Pro" class="w-full bg-[#0B0D12] border border-slate-700 rounded px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-bold block mb-1">Version</label>
+          <input id="new-app-version" type="text" placeholder="1.0.0" class="w-full bg-[#0B0D12] border border-slate-700 rounded px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none"/>
+        </div>
+        <div class="flex items-center gap-3">
+          <input id="new-app-hwid" type="checkbox" checked class="w-4 h-4 accent-cyan-400"/>
+          <label for="new-app-hwid" class="text-sm text-slate-300">Enable HWID Lock</label>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="createApp()" class="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 text-black font-bold rounded text-sm hover:opacity-90 transition-all">Create Application</button>
+        <button onclick="closeModal('modal-create-app')" class="flex-1 py-2.5 border border-slate-700 text-slate-300 font-semibold rounded text-sm hover:bg-slate-800 transition-all">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE USER MODAL -->
+  <div id="modal-create-user" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0C0E14] border border-cyan-500/30 rounded-lg shadow-[0_0_40px_rgba(6,182,212,0.15)] w-full max-w-md p-6 relative">
+      <div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-cyan-500 to-purple-600"></div>
+      <h3 class="text-lg font-bold font-['Orbitron'] text-cyan-400 mb-5 tracking-wider">CREATE USER</h3>
+      <div class="space-y-4">
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-bold block mb-1">Username *</label>
+          <input id="new-user-username" type="text" placeholder="e.g. player1" class="w-full bg-[#0B0D12] border border-slate-700 rounded px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-bold block mb-1">Password *</label>
+          <input id="new-user-password" type="text" placeholder="e.g. securePass123" class="w-full bg-[#0B0D12] border border-slate-700 rounded px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-bold block mb-1">License Key</label>
+          <input id="new-user-license" type="text" placeholder="Optional - link to existing license" class="w-full bg-[#0B0D12] border border-slate-700 rounded px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none"/>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 uppercase tracking-wider font-bold block mb-1">App ID</label>
+          <input id="new-user-appid" type="text" placeholder="Optional - e.g. app_xxxx" class="w-full bg-[#0B0D12] border border-slate-700 rounded px-4 py-2.5 text-sm text-slate-100 focus:border-cyan-500 outline-none"/>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="createUser()" class="flex-1 py-2.5 bg-gradient-to-r from-cyan-500 to-purple-600 text-black font-bold rounded text-sm hover:opacity-90 transition-all">Create User</button>
+        <button onclick="closeModal('modal-create-user')" class="flex-1 py-2.5 border border-slate-700 text-slate-300 font-semibold rounded text-sm hover:bg-slate-800 transition-all">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- APP DETAIL MODAL -->
+  <div id="modal-app-detail" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-[#0C0E14] border border-purple-500/30 rounded-lg shadow-[0_0_40px_rgba(168,85,247,0.15)] w-full max-w-xl p-6 relative overflow-y-auto max-h-[90vh]">
+      <div class="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-purple-500 to-cyan-500"></div>
+      <h3 class="text-lg font-bold font-['Orbitron'] text-purple-400 mb-5 tracking-wider" id="detail-app-name">APP DETAILS</h3>
+      <div class="space-y-3 text-sm font-mono">
+        <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+          <span class="text-slate-500 text-xs uppercase tracking-wider">Owner ID</span>
+          <p id="detail-owner-id" class="text-slate-200 mt-1 break-all"></p>
+        </div>
+        <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+          <span class="text-slate-500 text-xs uppercase tracking-wider">App ID</span>
+          <p id="detail-app-id" class="text-cyan-400 mt-1 break-all select-all"></p>
+        </div>
+        <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+          <span class="text-slate-500 text-xs uppercase tracking-wider">App Secret</span>
+          <div class="flex items-center gap-2 mt-1">
+            <p id="detail-app-secret" class="text-yellow-400 break-all select-all flex-1"></p>
+            <button id="btn-regen-secret" onclick="regenSecret()" class="text-xs px-2 py-1 bg-yellow-900/30 border border-yellow-500/30 rounded text-yellow-400 hover:bg-yellow-900/50 transition-all whitespace-nowrap">Regen</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+            <span class="text-slate-500 text-xs uppercase tracking-wider">Version</span>
+            <p id="detail-version" class="text-slate-200 mt-1"></p>
+          </div>
+          <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+            <span class="text-slate-500 text-xs uppercase tracking-wider">Status</span>
+            <p id="detail-status" class="text-emerald-400 mt-1"></p>
+          </div>
+          <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+            <span class="text-slate-500 text-xs uppercase tracking-wider">Total Users</span>
+            <p id="detail-user-count" class="text-purple-400 mt-1"></p>
+          </div>
+          <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+            <span class="text-slate-500 text-xs uppercase tracking-wider">Total Keys</span>
+            <p id="detail-key-count" class="text-cyan-400 mt-1"></p>
+          </div>
+        </div>
+        <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+          <span class="text-slate-500 text-xs uppercase tracking-wider">HWID Lock</span>
+          <p id="detail-hwid-lock" class="text-slate-200 mt-1"></p>
+        </div>
+        <div class="bg-[#0B0D12] border border-slate-800 rounded p-3">
+          <span class="text-slate-500 text-xs uppercase tracking-wider">Created At</span>
+          <p id="detail-created-at" class="text-slate-200 mt-1"></p>
+        </div>
+      </div>
+      <div class="flex gap-3 mt-6">
+        <button onclick="deleteCurrentApp()" class="flex-1 py-2.5 bg-red-900/30 border border-red-500/30 text-red-400 font-bold rounded text-sm hover:bg-red-900/50 transition-all">Delete App</button>
+        <button onclick="closeModal('modal-app-detail')" class="flex-1 py-2.5 border border-slate-700 text-slate-300 font-semibold rounded text-sm hover:bg-slate-800 transition-all">Close</button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
