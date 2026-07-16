@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: dexauth-backend
+    env: node
+    buildCommand: npm ci
+    startCommand: node server.js
+    envVars:
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: ALLOWED_ADMIN_EMAIL
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+    disk:
+      name: dexauth-data
+      mountPath: /data
+      sizeGB: 5
